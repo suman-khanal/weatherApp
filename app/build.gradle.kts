@@ -34,6 +34,20 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            // Isolate test caches from the developer's home, including in read-only cloud homes.
+            val testHome = file("${gradle.gradleUserHomeDir}/robolectric-home")
+            it.systemProperty("user.home", testHome.absolutePath)
+            it.doFirst { testHome.mkdirs() }
+            it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+            // Forward standard proxy settings to the separate Android test JVM.
+            listOf("https.proxyHost", "https.proxyPort", "http.proxyHost", "http.proxyPort").forEach { name ->
+                System.getProperty(name)?.let { value -> it.systemProperty(name, value) }
+            }
+        }
+    }
     buildFeatures {
         compose = true
     }
@@ -57,6 +71,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.androidx.junit)
