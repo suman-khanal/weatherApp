@@ -22,6 +22,23 @@ class PreparationTipsTest {
     @Test fun hotThresholdIncludes28Degrees() {
         assertTrue(preparationTips(weather(feels = 28.0)).any { "water" in it })
     }
+    @Test fun freezingRainAddsGripAdviceAndWetWeatherGear() {
+        val tips = preparationTips(weather(code = 66))
+        assertTrue(tips.any { "grip" in it })
+        assertTrue(tips.any { "umbrella" in it })
+    }
+    @Test fun stormAdviceComesBeforePackingSuggestions() {
+        assertTrue(preparationTips(weather(code = 95)).first().contains("warnings"))
+    }
+    @Test fun comfortableBoundaryDoesNotSuggestColdOrHotGear() {
+        val tips = preparationTips(weather(feels = 18.0, wind = 29.9))
+        assertEquals(1, tips.size)
+        assertTrue(tips.first().contains("usual essentials"))
+    }
+    @Test fun fahrenheitDoesNotChangeCelsiusRuleThresholds() {
+        assertEquals("82 °F", temperatureLabel(28.0, true))
+        assertTrue(preparationTips(weather(feels = 28.0)).any { "water" in it })
+    }
     @Test fun unknownCodeDoesNotInventConditions() {
         assertEquals("Unknown conditions", conditionLabel(999))
     }
