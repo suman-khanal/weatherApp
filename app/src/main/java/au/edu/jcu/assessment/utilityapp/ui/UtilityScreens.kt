@@ -1,25 +1,31 @@
 package au.edu.jcu.assessment.utilityapp.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
-import au.edu.jcu.assessment.utilityapp.data.*
+import au.edu.jcu.assessment.utilityapp.R
+import au.edu.jcu.assessment.utilityapp.data.City
+import au.edu.jcu.assessment.utilityapp.data.Weather
 import au.edu.jcu.assessment.utilityapp.ui.theme.MobileTech_UtilityAppTheme
-import kotlin.math.roundToInt
+import au.edu.jcu.assessment.utilityapp.ui.theme.ThemeMode
 
 @Composable
 fun UtilityApp(
@@ -27,116 +33,56 @@ fun UtilityApp(
     onRefresh: () -> Unit,
     onCityChange: (City) -> Unit,
     onUnitsChange: (Boolean) -> Unit,
-    onTipsChange: (Boolean) -> Unit
+    onTipsChange: (Boolean) -> Unit,
+    onThemeChange: (ThemeMode) -> Unit
 ) {
     var settings by rememberSaveable { mutableStateOf(false) }
     BackHandler(enabled = settings) { settings = false }
     Scaffold(bottomBar = {
         NavigationBar {
-            NavigationBarItem(selected = !settings, onClick = { settings = false },
-                icon = { Icon(Icons.Default.Home, null) }, label = { Text("DayReady") })
-            NavigationBarItem(selected = settings, onClick = { settings = true },
-                icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
+            NavigationBarItem(
+                modifier = Modifier.testTag("today_tab"),
+                selected = !settings,
+                onClick = { settings = false },
+                icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                label = { Text(stringResource(R.string.weather_tab)) }
+            )
+            NavigationBarItem(
+                modifier = Modifier.testTag("settings_tab"),
+                selected = settings,
+                onClick = { settings = true },
+                icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                label = { Text(stringResource(R.string.settings_title)) }
+            )
         }
     }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            if (settings) SettingsScreen(state, onCityChange, onUnitsChange, onTipsChange)
-            else UtilityScreen(state, onRefresh)
-        }
-    }
-}
-
-@Composable
-fun UtilityScreen(state: WeatherUiState, onRefresh: () -> Unit) {
-    val uriHandler = LocalUriHandler.current
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("DayReady", style = MaterialTheme.typography.headlineLarge)
-        Text("A quick check before you head out.")
-        Text(state.city.name, style = MaterialTheme.typography.titleLarge)
-        if (state.loading) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text("Updating current weather…")
-        }
-        state.error?.let { message ->
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(message)
-                    if (state.weather != null) Text("Previous data is shown below; it may be out of date.")
-                    TextButton(onClick = onRefresh, enabled = !state.loading) { Text("Retry") }
-                }
+            if (settings) {
+                SettingsScreen(state, onCityChange, onUnitsChange, onTipsChange, onThemeChange)
+            } else {
+                UtilityScreen(state, onRefresh)
             }
         }
-        state.weather?.let { weather ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(temperatureLabel(weather.temperature, state.fahrenheit),
-                        style = MaterialTheme.typography.displayLarge)
-                    Text(conditionLabel(weather.code), style = MaterialTheme.typography.titleLarge)
-                    Text("Feels like ${temperatureLabel(weather.feelsLike, state.fahrenheit)}")
-                    Text("Wind ${weather.wind.roundToInt()} km/h • Rain ${weather.rain} mm")
-                    Text("Weather time: ${weather.time.replace('T', ' ')}")
-                    Text(weather.timezone, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-            if (state.showTips) {
-                Text("Before you leave", style = MaterialTheme.typography.titleLarge)
-                preparationTips(weather).forEach { tip ->
-                    OutlinedCard(Modifier.fillMaxWidth()) {
-                        Text(tip, Modifier.padding(16.dp))
-                    }
-                }
-                Text("Suggestions use current conditions, not a full-day forecast.",
-                    style = MaterialTheme.typography.bodySmall)
-            }
-        }
-        Button(onClick = onRefresh, enabled = !state.loading, modifier = Modifier.fillMaxWidth()) {
-            Text("Refresh weather")
-        }
-        TextButton(onClick = { uriHandler.openUri("https://open-meteo.com/") }) {
-            Text("Weather data by Open-Meteo · CC BY 4.0")
-        }
-    }
-}
-
-@Composable
-fun SettingsScreen(
-    state: WeatherUiState, onCityChange: (City) -> Unit,
-    onUnitsChange: (Boolean) -> Unit, onTipsChange: (Boolean) -> Unit
-) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Settings", style = MaterialTheme.typography.headlineLarge)
-        Text("Changes apply immediately.")
-        Text("Weather location", style = MaterialTheme.typography.titleLarge)
-        // Full-width labelled buttons remain usable with large fonts and narrow screens.
-        cities.forEach { city ->
-            OutlinedButton(onClick = { onCityChange(city) }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (state.city == city) "✓ ${city.name}" else city.name)
-            }
-        }
-        PreferenceSwitch("Use Fahrenheit", state.fahrenheit, onUnitsChange)
-        PreferenceSwitch("Show preparation tips", state.showTips, onTipsChange)
-        Text("Locations use city-centre coordinates. Settings remain during rotation but reset when a new app session starts.",
-            style = MaterialTheme.typography.bodySmall)
-    }
-}
-
-@Composable
-private fun PreferenceSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(label, Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange,
-            modifier = Modifier.semantics { contentDescription = label })
     }
 }
 
 @Preview(showBackground = true)
+@Preview(showBackground = true, widthDp = 360, fontScale = 1.5f)
 @Composable
-fun UtilityAppPreview() {
-    MobileTech_UtilityAppTheme {
-        UtilityApp(WeatherUiState(weather = Weather(26.0,27.0,2,0.0,12.0,
-            "2026-10-12T09:00","Australia/Brisbane")), {}, {}, {}, {})
+private fun WeatherPreview() {
+    MobileTech_UtilityAppTheme(mode = ThemeMode.LIGHT) {
+        UtilityApp(
+            WeatherUiState(weather = Weather(26.0, 27.0, 2, 0.0, 12.0,
+                "2026-10-15T09:00", "Australia/Brisbane")),
+            {}, {}, {}, {}, {}
+        )
+    }
+}
+
+@Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun DarkWeatherPreview() {
+    MobileTech_UtilityAppTheme(mode = ThemeMode.DARK) {
+        UtilityApp(WeatherUiState(loading = true), {}, {}, {}, {}, {})
     }
 }
