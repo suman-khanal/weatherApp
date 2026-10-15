@@ -44,3 +44,6 @@ fabric.properties
 
 # Google Services
 google-services.json
+
+# Kotlin compiler cache
+.kotlin/
