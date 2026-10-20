@@ -2,8 +2,8 @@ package au.edu.jcu.assessment.utilityapp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// The same deep teal and warm sun appear in the launcher and in-app mark.
-val DayTeal = Color(0xFF006A64)
-val NightTeal = Color(0xFF77D8CD)
-val SunGold = Color(0xFF805600)
-val NightGold = Color(0xFFF5BE59)
+// A consistent sky-and-ocean palette used throughout DayReady.
+val SkyBlue = Color(0xFF145DA0)
+val DeepNavy = Color(0xFF102C47)
+val CloudBlue = Color(0xFFE9F4FF)
+val Aqua = Color(0xFF80D8F7)

@@ -10,10 +10,7 @@ interface WeatherApi {
         @Query("latitude") latitude: Double,
         @Query("longitude") longitude: Double,
         @Query("current") current: String = "temperature_2m,apparent_temperature,weather_code,precipitation,wind_speed_10m",
-        @Query("timezone") timezone: String = "auto",
-        @Query("temperature_unit") temperatureUnit: String = "celsius",
-        @Query("wind_speed_unit") windUnit: String = "kmh",
-        @Query("precipitation_unit") precipitationUnit: String = "mm"
+        @Query("timezone") timezone: String = "auto"
     ): ForecastResponse
 }
 

@@ -1,12 +1,8 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- Sun and cloud stay inside the adaptive icon safe zone. -->
-    <path android:fillColor="#F5BE59"
-        android:pathData="M62,31a14,14 0,1 0,0 28a14,14 0,1 0,0 -28" />
-    <path android:strokeColor="#F5BE59" android:strokeWidth="3"
-        android:strokeLineCap="round" android:fillColor="@android:color/transparent"
-        android:pathData="M62,24L62,20M77,30L80,27M83,45L87,45M47,30L44,27" />
-    <path android:fillColor="#FFFFFF"
-        android:pathData="M34,72C25,72 25,57 34,56C33,40 54,36 60,51C75,47 82,57 77,66C75,70 72,72 68,72Z" />
+    <!-- Stylised sun above two cloud curves, centered in the adaptive icon safe zone. -->
+    <path android:fillColor="#FFDF72" android:pathData="M66,37 A12,12 0,1 1,42,37 A12,12 0,1 1,66,37 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M33,66 C24,66 23,53 32,51 C33,40 46,37 53,44 C60,34 75,40 75,51 C86,52 86,66 76,66 Z" />
+    <path android:fillColor="#80D8F7" android:pathData="M38,72 L70,72 L70,76 L38,76 Z" />
 </vector>
