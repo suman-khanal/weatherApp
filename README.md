@@ -1,124 +1,71 @@
-[README.md file](sandbox:/workspace/artifacts/dayready-feature-readme/README.md)
+# DayReady — Weather Preparation App
 
-Since earlier downloads failed, you can also copy the following into a file named **`README.md`** in your project’s root folder.
+An Android utility app built from the CP3406 / CP5307 starter template using Kotlin, Jetpack Compose and Material Design 3. It uses a single activity with navigation between the Today and Settings screens.
 
-````markdown
-# DayReady
+## Features
 
-DayReady is an Android utility app for checking the weather before leaving home. It shows current conditions and a short preparation checklist, helping users decide whether to take rain gear, water or an extra layer.
+- Current weather for Brisbane, Sydney, Melbourne, Perth and Kathmandu, with city selection and no location permission required.
+- Temperature, feels-like temperature, conditions, wind and precipitation readings.
+- A short preparation checklist (extra layer, water, wind advice, rain gear) based on current conditions.
+- Celsius/Fahrenheit display, an optional checklist, and device, light or dark appearance in Settings.
+- Manual refresh, loading feedback, and retry after errors. A failed refresh keeps the previous weather with a warning.
+- Rotation and session restoration, and layouts that adapt to wide screens and larger text.
 
-The project builds on the lecturer’s CP3406 / CP5307 Compose template. It uses a single activity with two screens: Today and Settings.
+## Run the project
 
-## Core features and implementation
+1. Open the project root (the folder containing `settings.gradle.kts`) in Android Studio.
+2. Install Android SDK platform 36 and build-tools 35.0.0, and select a full JDK 21 (including `javac`) as the Gradle JDK.
+3. Sync Gradle, then run on an emulator or device running Android 8.0 / API 26 or later.
 
-| Feature | Implementation |
-|---|---|
-| Current weather | `WeatherApi.kt` defines the Retrofit request to Open-Meteo. Gson maps the JSON response, and `NetworkWeatherRepository` validates the data before returning a `Weather` object. The screen displays temperature, feels-like temperature, conditions, wind and precipitation. |
-| City selection | `Weather.kt` stores coordinates for Brisbane, Sydney, Melbourne, Perth and Kathmandu. Selecting a city calls `WeatherViewModel.selectCity()`, clears the previous city’s weather and starts a new request. No device-location permission is needed. |
-| Preparation tips | `preparationTips()` in `PreparationTips.kt` applies rules to current conditions. It suggests extra layers below 18°C feels-like, water at 28°C or above, and wind preparation at 30 km/h or above. Weather codes and precipitation trigger additional advice. |
-| Celsius/Fahrenheit | `temperatureLabel()` converts Celsius to Fahrenheit for display. Both temperature and feels-like values use the selected setting. Internal values remain Celsius, so changing units does not require another API request. |
-| Tips and appearance settings | Settings callbacks update `WeatherUiState`. Users can show or hide the checklist and choose device, light or dark appearance. The Material 3 theme uses a teal palette and matching sun/cloud launcher artwork. |
-| Refresh and error recovery | The ViewModel fetches weather when it is created and provides manual refresh. Loading and error states are displayed in Compose. Failed refreshes retain previous weather with a warning. |
-| Request cancellation | Refresh cancels the previous request. A request identifier also prevents an older response from replacing a newer result after rapid city changes. |
-| State restoration | The ViewModel retains state during rotation. `SavedStateHandle` restores settings when Android restores the session, while `rememberSaveable` restores the selected tab. |
-| Responsive layout | Reusable Compose components display weather, metrics, tips and settings. Both screens scroll. Wide layouts can show weather and tips side by side; compact layouts and larger text use stacked metrics. |
+The Gradle wrapper is included. From the project root, use:
 
-Preparation tips use current conditions. They are not a daily forecast or official severe-weather advice.
-
-## Architecture
-
-```text
-MainActivity → WeatherViewModel → WeatherRepository → WeatherApi → Open-Meteo
-                       ↓
-                 WeatherUiState → Compose screens
+```bash
+./gradlew assembleDebug
+./gradlew testDebugUnitTest
+./gradlew lintDebug
+./gradlew connectedDebugAndroidTest   # requires a device or emulator
 ```
 
-`DayReadyApplication` owns `AppContainer`, which creates the OkHttp client, Retrofit service and repository. `MainActivity` supplies the repository through the ViewModel factory. This is manual dependency injection.
+On Windows, use `gradlew.bat` instead of `./gradlew`. The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
-The ViewModel manages requests and publishes screen state through `StateFlow`. Compose observes that state with `collectAsStateWithLifecycle` and sends user actions back through callbacks. Networking stays outside the screen composables.
+Internet access is required for dependency downloads and weather requests. The current API setup requires no API key. Brisbane is selected on first launch.
 
-The Kotlin source is under:
+## Code structure
 
-`app/src/main/java/au/edu/jcu/assessment/utilityapp/`
+Source root: `app/src/main/java/au/edu/jcu/assessment/utilityapp/`
 
-- `data/`: city and weather models, Retrofit API and repository.
-- `di/`: dependency construction in `AppContainer`.
-- `ui/`: ViewModel, navigation, screens and preparation rules.
-- `ui/theme/`: colours, typography and appearance selection.
+| Location | Responsibility |
+| --- | --- |
+| `DayReadyApplication` | Application class that owns `AppContainer` |
+| `MainActivity` | Activity setup and ViewModel factory |
+| `di/AppContainer` | Manual dependency injection: OkHttp client, Retrofit service and repository |
+| `data/Weather.kt` | Weather model and preset city coordinates |
+| `data/WeatherApi.kt` | Retrofit interface and Gson response mapping for Open-Meteo |
+| `data/NetworkWeatherRepository` | Fetching, response validation and error handling |
+| `ui/WeatherViewModel` | Request lifecycle, city selection, refresh and `StateFlow` state |
+| `ui/WeatherUiState` | Screen state: weather, loading/error status, city, units and settings |
+| `ui/PreparationTips.kt` | `preparationTips()` checklist rules and `temperatureLabel()` unit conversion |
+| `ui/` screens and navigation | Today and Settings screens built from reusable Compose components |
+| `ui/theme/` | Teal Material 3 palette, typography and appearance selection |
 
-## Networking and data handling
+## Data and behaviour
 
-The app requests current weather from:
+Data comes from the [Open-Meteo forecast API](https://open-meteo.com/en/docs) (`https://api.open-meteo.com/v1/forecast`) and represents current conditions, not a daily forecast. Requests include the selected coordinates, weather fields, explicit units and `timezone=auto`. Wind is in km/h and precipitation in millimetres for the current API interval.
 
-`https://api.open-meteo.com/v1/forecast`
+Temperature is held in Celsius internally, so changing units converts for display without a new request. Missing fields or invalid measurements are rejected and shown as an error rather than displayed as zero. Timestamps use the returned city timezone, and observations at least 30 minutes old are labelled as previous conditions; this does not trigger an automatic refresh.
 
-Requests include the selected coordinates, weather fields, explicit units and `timezone=auto`.
+Selecting another city or refreshing cancels the previous request, and a request identifier prevents an obsolete response from replacing a newer result. OkHttp uses a 15-second connection timeout, 20-second read timeout and 30-second call timeout.
 
-The repository rejects missing fields and invalid measurements instead of displaying fabricated zero values. OkHttp uses a 15-second connection timeout, 20-second read timeout and 30-second call timeout.
+Settings are restored with `SavedStateHandle` when Android restores the session, but they are not persisted across a fresh app launch. There is no GPS, weather cache, background refresh, daily forecast or severe-weather alert service. Preparation tips are general guidance and not official advice.
 
-Temperature remains Celsius internally. Wind uses km/h, and precipitation uses millimetres for the current API interval rather than a daily total. Timestamps use the returned city timezone.
+## Verification
 
-The interface labels observations at least 30 minutes old as previous conditions. This freshness check does not automatically download new weather.
+Validation recorded on 15 October 2026 included 25 passing unit and host-side Compose tests, successful app and test APK builds, Android Lint with no errors (14 dependency-update notices), and a successful live Open-Meteo endpoint check. The tests cover preparation rules, conversions, API mapping, invalid data, HTTP failures, refresh recovery, request races, saved settings, timezone freshness and Compose interactions.
 
-## Build and run
-
-The project was tested with:
-
-- Full JDK 21, including `javac`.
-- Android SDK platform 36.
-- Android build-tools 35.0.0.
-- Gradle 8.13.
-- Android Gradle Plugin 8.13.2.
-- Kotlin 2.0.21.
-
-Java and Kotlin bytecode target version 11. The minimum supported Android version is API 26.
-
-1. Open the folder containing `settings.gradle.kts` in Android Studio.
-2. Install the SDK components and select the full JDK as the Gradle JDK.
-3. Sync the project with internet access.
-4. Run the `app` module on a suitable device or emulator.
-
-Brisbane is selected initially. No account or API key is required.
-
-```sh
-# macOS or Linux
-bash gradlew testDebugUnitTest lintDebug assembleDebug
-
-# Windows
-gradlew.bat testDebugUnitTest lintDebug assembleDebug
-
-# With a connected device or running emulator
-bash gradlew connectedDebugAndroidTest
-```
-
-The debug APK is generated at:
-
-`app/build/outputs/apk/debug/app-debug.apk`
-
-## Testing
-
-Validation recorded on 15 October 2026 included:
-
-- 25 passing unit and host-side Compose tests.
-- Successful app and test APK builds.
-- Android Lint with no errors and 14 dependency-update notices.
-- A successful live Open-Meteo endpoint check.
-
-Tests cover preparation rules, conversions, API mapping, invalid data, HTTP failures, refresh recovery, request races, saved settings, timezone freshness and Compose interactions.
-
-Five device tests compile but were not run because the software emulator did not complete its first boot. Physical-device rotation, accessibility and network-recovery checks remain outstanding.
-
-A GitHub Actions workflow is included to run host tests, lint and the APK build. Remote workflow results require separate verification.
+Five device tests compile but were not run because the software emulator did not complete its first boot. Physical-device rotation, accessibility and network-recovery checks are still outstanding. A GitHub Actions workflow runs host tests, lint and the APK build, but its remote results still need to be verified.
 
 ## Attribution
 
-Weather data comes from [Open-Meteo](https://open-meteo.com/) under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Weather data is provided by [Open-Meteo](https://open-meteo.com/) under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), using the non-commercial endpoint (see the [API terms](https://open-meteo.com/en/terms)).
 
-The app uses the [non-commercial forecast endpoint](https://open-meteo.com/en/docs). See the [API terms](https://open-meteo.com/en/terms).
-
-The lecturer’s template supplied the starting structure and navigation concept. ChatGPT/Codex assisted with implementation, troubleshooting, testing and documentation. This assistance should be included in the assignment’s required AI declaration.
-
-## Limitations
-
-The app uses preset city-centre locations. It has no GPS tracking, persistent weather cache, background refresh, daily forecast or severe-weather alert service. Preferences are not permanently stored between fresh sessions.
-````
+Based on the MobileTech Utility App educational starter supplied for CP3406 / CP5307, which provided the starting structure and navigation concept. ChatGPT/Codex assisted with implementation, troubleshooting, testing and documentation, and should be included in the assignment's AI declaration.
